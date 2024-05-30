@@ -1,5 +1,7 @@
 import re
 from collections import defaultdict
+import pandas as pd
+import numpy as np
 
 def parse_pgn(file_path):
     with open(file_path, 'r') as file:
@@ -60,7 +62,28 @@ def tokenize_pgn(pgn_text):
     
     return move_tokens
 
+def compute_bigram_probabilities(bigram_counts):
+    total_bigrams = sum(bigram_counts.values())
+    bigram_probabilities = {bigram: count / total_bigrams for bigram, count in bigram_counts.items()}
+    return bigram_probabilities
 
-file_path = 'comp_chess_games.pgn'
+def create_bigram_dataframe(bigram_probabilities):
+    data = {
+        'First Move': [bigram[0] for bigram in bigram_probabilities.keys()],
+        'Second Move': [bigram[1] for bigram in bigram_probabilities.keys()],
+        'Probability': list(bigram_probabilities.values())
+    }
+    df = pd.DataFrame(data)
+    return df
 
-bigrams = process_pgn(file_path)
+def predict_next_move(df, current_move):
+    filtered_df = df[df['First Move'] == current_move]
+    if filtered_df.empty:
+        return None
+    return filtered_df.sample(weights=filtered_df['Probability']).iloc[0]['Second Move']
+
+def save_bigram_dataframe(df, file_path):
+    df.to_csv(file_path, index=False)
+
+def load_bigram_dataframe(file_path):
+    return pd.read_csv(file_path)
